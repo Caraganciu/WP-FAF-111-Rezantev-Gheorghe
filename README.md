@@ -1,2 +1,3 @@
-Course : Windows Programming 
+#Course : Windows Programming 
+
 Student: Reazantev Gheorghe 
