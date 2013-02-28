@@ -1,8 +1,17 @@
 #include <windows.h>
+#include <stdio.h>
+#include <tchar.h>
+
 
 //Defining the ID values of the windows
 #define ID_FONT_BUTTON  10
 #define ID_COLOR_BUTTON 20
+#define ID_LIST_BOX     30
+#define ID_TEXT_INPUT   40
+#define ID_INPUT_BUTTON 50
+#define TIMES_NEW_ROMAN       100
+#define ARIAL                 200
+#define CALIBRI               300
 
 //  Declare Windows procedure
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
@@ -16,6 +25,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
                      LPSTR lpszArgument,
                      int nCmdShow)
 {
+
     hInst=hThisInstance;
     HWND hwnd;               /* This is the handle for our window */
     MSG messages;            /* Here messages to the application are saved */
@@ -36,7 +46,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     wincl.cbClsExtra = 0;                      /* No extra bytes after the window class */
     wincl.cbWndExtra = 0;                      /* structure or the window instance */
     /* Use Windows's white colour as the background of the window */
-    wincl.hbrBackground = (HBRUSH) GetStockObject(GRAY_BRUSH);
+    wincl.hbrBackground = (HBRUSH) CreateSolidBrush(RGB(136,152,213));
 
     /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
@@ -75,6 +85,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     }
 
     /* The program return-value is 0 - The value that PostQuitMessage() gave */
+
+
     return messages.wParam;
 }
 
@@ -82,12 +94,16 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 /*  This function is called by the Windows function DispatchMessage()  */
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{   static HWND hwndFontButton, hwndColorButton, hwndTitleBar,hwndInputBar;
+{   static HWND hwndFontButton, hwndColorButton,hwndListBox,hwndTextInput,hwndInputButton;
     HDC hdc;
+    HFONT textFont;
+    static char colorBit=2;
     PAINTSTRUCT ps;
-    static RECT rect;
-    static int cyChar,cxChar;
-    static int jCount;
+    static RECT rect,resizeRect;
+    static char* inputText[200];
+    static int cyChar,cxChar,textSize;
+    static int colorFlag,fontFlag,textHeight,fontNumber=100;
+    HBRUSH color;
     switch (message)                  /* handle the messages */
     {   case WM_CREATE:
             //Getting the dimensions of the client area
@@ -98,13 +114,30 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             //Creating the windows for the buttons and text boxes
             hwndFontButton=CreateWindowEx((DWORD)NULL,TEXT("button"),
                                           TEXT("FONT"),WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,
-                                          rect.right-cxChar*40-20,rect.bottom-50,cxChar*40,cyChar*1.5,hwnd,(HMENU)ID_FONT_BUTTON,
+                                          rect.right-cxChar*40-20,rect.bottom-50,cxChar*30,cyChar*1.5,hwnd,(HMENU)ID_FONT_BUTTON,
+                                          hInst,NULL);
+
+            hwndInputButton=CreateWindowEx((DWORD)NULL,TEXT("button"),
+                                          TEXT("Press to input"),WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,
+                                          rect.left+21,rect.bottom-49,cxChar*30,cyChar*1.5,hwnd,(HMENU)ID_INPUT_BUTTON,
                                           hInst,NULL);
 
             hwndColorButton=CreateWindowEx((DWORD)NULL,TEXT("button"),
                                           TEXT("COLOR"),WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,
                                           rect.right-cxChar*15-20,rect.bottom-50-cyChar*1.5,cxChar*15,cyChar*1.5,hwnd,(HMENU)ID_COLOR_BUTTON,
                                           hInst,NULL);
+
+            hwndListBox=CreateWindowEx((DWORD)NULL,TEXT("listbox"),
+                                          TEXT("LISTBOX"),WS_VISIBLE | WS_CHILD | WS_VSCROLL |LBS_NOINTEGRALHEIGHT |ES_READONLY |WS_HSCROLL,
+                                          rect.left+21,rect.top+41,rect.right-rect.left-41,rect.bottom-rect.top-120,hwnd,(HMENU)ID_LIST_BOX,
+                                          hInst,NULL);
+
+            hwndTextInput=CreateWindowEx((DWORD)NULL,"EDIT",
+                                          TEXT(""),WS_VISIBLE | WS_CHILD | WS_BORDER |LBS_NOINTEGRALHEIGHT ,
+                                          0,0,0,0,hwnd,(HMENU)ID_TEXT_INPUT,
+                                          hInst,NULL);
+
+            SendDlgItemMessage(hwnd, ID_LIST_BOX, LB_ADDSTRING, 0, (LPARAM)"Hi there!");
 
         case WM_SIZE:
 
@@ -114,8 +147,17 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             rect.top   =40;
             rect.bottom-=80;
             rect.right -=20;
-            //Resetting the count of lines of text on window resizing so that the next output won't be out of bounds
-            jCount=0;
+            //Moving the buttons and other windows according to the resize
+            MoveWindow(hwndFontButton,rect.right-cxChar*30,rect.bottom+31,cxChar*30,cyChar*1.5,FALSE);
+
+            MoveWindow(hwndInputButton,rect.left,rect.bottom+31,cxChar*30,cyChar*1.5,FALSE);
+
+            MoveWindow(hwndColorButton,rect.right-cxChar*15,rect.bottom+30-cyChar*1.5,cxChar*15,cyChar*1.5,FALSE);
+
+            MoveWindow(hwndListBox,rect.left+1,1+rect.top,rect.right-rect.left-1,rect.bottom-rect.top-1,FALSE);
+
+            MoveWindow(hwndTextInput,rect.left,rect.bottom+2,rect.right-rect.left-cxChar*16,cyChar*1.5,FALSE);
+
             //Getting a handle to the whole window and drawing the rectangle with an extra set of lines around it
             hdc=GetDC(hwnd);
             MoveToEx(hdc,rect.left,rect.top,NULL);
@@ -123,28 +165,111 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             LineTo(hdc,rect.right,rect.bottom);
             LineTo(hdc,rect.left,rect.bottom);
             LineTo(hdc,rect.left,rect.top);
-            Rectangle(hdc,rect.left+1,rect.top+1,rect.right,rect.bottom);
             ReleaseDC(hwnd,hdc);
-            //Moving the buttons and other windows according to the resize
-            MoveWindow(hwndFontButton,rect.right-cxChar*40,rect.bottom+30,cxChar*40,cyChar*1.5,FALSE);
-            MoveWindow(hwndColorButton,rect.right-cxChar*15,rect.bottom+30-cyChar*1.5,cxChar*15,cyChar*1.5,FALSE);
+
             return 0;
+
+        case WM_COMMAND:
+            if(wParam==IDOK)
+            {
+
+                return 0;
+            }
+            switch(LOWORD(wParam))
+            {
+                case ID_FONT_BUTTON:
+                    fontNumber=((fontNumber/100)%3)*100+100;
+                    fontFlag=1;
+                    RedrawWindow(hwndListBox,NULL,NULL,RDW_INVALIDATE);
+                    break;
+                case ID_COLOR_BUTTON:
+                    if(colorBit) colorBit=(colorBit%8)*2;
+                    else colorBit=2;
+                    colorFlag=1;
+                    RedrawWindow(hwndListBox,NULL,NULL,RDW_INVALIDATE);
+                    break;
+                case ID_INPUT_BUTTON:
+                    {
+                        textSize=SendMessage(hwndTextInput,WM_GETTEXT,200,(LONG)inputText);
+                        inputText[textSize]=_T('\0');
+                        SendDlgItemMessage(hwnd, ID_LIST_BOX, LB_ADDSTRING, 0, (LPARAM)inputText);
+                        SendMessage(hwndTextInput,WM_SETTEXT,NULL,(LPARAM)"");
+
+                    }
+                default: break;
+            }
+            return 0;
+
+        case WM_CTLCOLORLISTBOX:
+            if(GetDlgCtrlID((HWND)lParam)==ID_LIST_BOX&&colorFlag)
+            {
+                hdc=(HDC)wParam;
+                color=CreateSolidBrush(RGB(255,255,255));
+                SetTextColor(hdc,RGB(((colorBit>>3)&0x01)*255,((colorBit>>2)&0x01)*255,((colorBit>>1)&0x01)*255));
+                colorFlag=0;
+                return (LONG)color;
+            }
+
+            if(GetDlgCtrlID((HWND)lParam)==ID_LIST_BOX&&fontFlag)
+            {
+                hdc=(HDC)wParam;
+                color=CreateSolidBrush(RGB(255,255,255));
+                textHeight = -MulDiv(12, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+                SetTextColor(hdc,RGB(((colorBit>>3)&0x01)*255,((colorBit>>2)&0x01)*255,((colorBit>>1)&0x01)*255));
+                switch(fontNumber)
+                {
+                    case TIMES_NEW_ROMAN:
+                        textFont = CreateFont(textHeight, 0, 0, 0, 0, TRUE, 0, 0, 0, 0, 0, 0, 0, "Times New Roman");
+                        break;
+                    case ARIAL:
+                        textFont = CreateFont(textHeight, 0, 0, 0, 0, TRUE, 0, 0, 0, 0, 0, 0, 0, "Arial");
+                        break;
+                    case CALIBRI:
+                        textFont = CreateFont(textHeight, 0, 0, 0, 0, TRUE, 0, 0, 0, 0, 0, 0, 0, "Calibri");
+                        break;
+                }
+
+
+                if(textFont)
+                {
+                    SendMessage(hwndListBox,WM_SETFONT,WPARAM(textFont),TRUE);
+                }
+                fontFlag=0;
+                return (LONG)color;
+            }
 
         case WM_PAINT:
             //Getting a handle on the window
             hdc=BeginPaint(hwnd,&ps);
-            SetTextColor(hdc,RGB(015,100,105));
-            TextOut(hdc,25,rect.top+2+cyChar*jCount++,">>Hello World!",14);
-            TextOut(hdc,25,rect.top+2+cyChar*jCount++,">>Hello World!",14);
-            TextOut(hdc,25,rect.top+2+cyChar*jCount++,">>Hello World!",14);
+
             EndPaint(hwnd,&ps);
             return 0;
+
+        case WM_CLOSE:
+            SetWindowPos(hwnd,HWND_TOP,500,500,60,60,SWP_SHOWWINDOW);
+            break;
+        case WM_SYSCOMMAND:
+            switch(wParam)
+            {
+                case SC_MINIMIZE:
+                DestroyWindow(hwnd);
+                break;
+                case SC_MAXIMIZE:
+                MessageBox(hwnd,TEXT("....maybe not"),szClassName,MB_ICONWARNING);
+                break;
+                default: DefWindowProc (hwnd, message, wParam, lParam);
+            }
+            return 0;
+
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;
+
         default:                      /* for messages that we don't deal with */
             return DefWindowProc (hwnd, message, wParam, lParam);
     }
 
     return 0;
 }
+
+
