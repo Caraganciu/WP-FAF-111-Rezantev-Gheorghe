@@ -44,7 +44,7 @@ and functionality to the app.
 5. Changed the background of the input box and the font of a button , color of a normal text ...
 The PSG I used was the USC Aerial Robotics Programming Style Guide (C++) *(I still need a lot of getting used to in order to write everything accoring to the PSG)
 
-![Result](https://raw.github.com/TUM-FAF/WP-FAF-111-Rezantev-Gheorghe/blob/lab1/lab%231/picture.png)
+![Result](https://raw.github.com/TUM-FAF/WP-FAF-111-Rezantev-Gheorghe/lab1/lab%231/picture.png)
 
 ## Outro
 Doing the laboratory work was certainly interesting ,but also very frustrating getting to understand how the messages fly around from procedure to window and
