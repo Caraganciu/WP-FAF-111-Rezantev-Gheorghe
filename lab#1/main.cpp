@@ -100,7 +100,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     static char colorBit=2;
     PAINTSTRUCT ps;
     static RECT rect,resizeRect;
-    static char* inputText[200];
+    static char* inputText=new char[200];
     static int cyChar,cxChar,textSize;
     static int colorFlag,fontFlag,textHeight,fontNumber=100;
     HBRUSH color;
@@ -170,11 +170,6 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             return 0;
 
         case WM_COMMAND:
-            if(wParam==IDOK)
-            {
-
-                return 0;
-            }
             switch(LOWORD(wParam))
             {
                 case ID_FONT_BUTTON:
