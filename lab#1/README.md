@@ -42,6 +42,7 @@ and functionality to the app.
 3. Made elements fit on window resize and set the minimal window dimensions .
 4. Changed the default window buttons functionality(close,minimize,maximize) for trolling purposes .
 5. Changed the background of the input box and the font of a button , color of a normal text ...
+
 The PSG I used was the USC Aerial Robotics Programming Style Guide (C++) *(I still need a lot of getting used to in order to write everything accoring to the PSG)
 
 ![Result](https://raw.github.com/TUM-FAF/WP-FAF-111-Rezantev-Gheorghe/lab1/lab%231/picture.png)
