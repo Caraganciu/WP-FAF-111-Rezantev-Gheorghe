@@ -27,13 +27,14 @@
 * Change behavior of different window actions (at least 3) **(1pt)**
 
 ## The application creation steps
-    In order to accomplish this task I read the chapters required from the referenced book 
-    and also used a lot of help from online sites like msdn, StackOverflow and a lot of other google related searches . 
+
+In order to accomplish this task I read the chapters required from the referenced book 
+and also used a lot of help from online sites like msdn, StackOverflow and a lot of other google related searches . 
     
-    As my working enviroment I used CodeBlock 12.11 with the mingw packages and started my work as a win32 GUI frame project.
+As my working enviroment I used CodeBlock 12.11 with the mingw packages and started my work as a win32 GUI frame project.
     
-    As a main idea around which my project evolved was a "text editor " and based on that i added the following elements
-    and functionality to the app.
+As a main idea around which my project evolved was a "text editor " and based on that i added the following elements
+and functionality to the app.
     
 
 1. 4 Buttons(font change button , color change button , input the text button and clear the text button )
