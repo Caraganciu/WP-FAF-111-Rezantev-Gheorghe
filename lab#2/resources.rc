@@ -1,0 +1,35 @@
+#include "resources.h"
+#include "afxres.h"
+//Icon location
+IDI_ICON  ICON DISCARDABLE "cube.ico"
+//Cursor location
+IDI_CURSOR CURSOR DISCARDABLE "arrow.cur"
+//Menu
+IDI_MENU MENU DISCARDABLE
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Exit",           IDI_EXIT
+    END
+    POPUP "&ListBoxColor"
+    BEGIN
+        MENUITEM "&RED",            IDI_RED
+        MENUITEM "&WHITE",          IDI_WHITE
+    END
+    POPUP "&ABOUT"
+    BEGIN
+        MENUITEM "&Info",           IDI_INFO
+    END
+END
+//Dialog box
+IDI_DIALOG DIALOG DISCARDABLE 32,32,180,100
+STYLE DS_MODALFRAME | WS_POPUP
+FONT 10 , "Times New Roman"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,66,80,50,14
+    ICON            IDI_ICON,IDC_STATIC,0,0,30,50
+    CTEXT           "Shift+L to focus on the list box",IDC_STATIC,40,10,100,8
+    CTEXT           "Ctrl+S to focus on the color scroll bar",IDC_STATIC,7,20,166,8
+    CTEXT           "Use the spacebar while focused on the list box ",IDC_STATIC,7,30,166,8
+    CTEXT           "to get additional info or use double click ",IDC_STATIC,7,40,166,8
+END
