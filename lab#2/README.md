@@ -12,7 +12,6 @@
 * Dialog Boxes
 
 ## Completed Mandatory Objectives
-## Mandatory Objectives
 * Display a dialog box on some event (ex. on clicking some button)
 * Add a system menu to your application with at least 3 items (add actions to that items)
 * Add a scroll bar that will change any visible parameter of any other element (color of a text)
