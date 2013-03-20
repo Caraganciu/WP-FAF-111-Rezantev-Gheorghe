@@ -11,7 +11,13 @@
 #define IDI_WHITE        206
 #define IDI_INFO         207
 #define IDI_DIALOG       208
-
+#define KEY_L            0x4C
+#define KEY_S            0x53
+#define X_PAGE_MOVE      15
+#define Y_PAGE_MOVE      15
+#define X_LINE_MOVE      10
+#define Y_LINE_MOVE      10
+#define DELTA_COLOR      15
 //Lots of definitions and a structure ... YAY
 typedef struct People
 {

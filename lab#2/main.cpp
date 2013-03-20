@@ -125,12 +125,12 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 switch(LOWORD(wParam))
                 {
                 case SB_PAGEDOWN:
-                    alfa+=15;
+                    alfa+=DELTA_COLOR;
                 case SB_LINEDOWN:
                     alfa=min(255,alfa+1);
                     break;
                 case SB_PAGEUP:
-                    alfa-=15;
+                    alfa-=DELTA_COLOR;
                 case SB_LINEUP:
                     alfa=max(0,alfa-1);
                     break;
@@ -155,14 +155,14 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 switch(LOWORD(wParam))
                 {
                 case SB_PAGEDOWN:
-                    posY-=15;
+                    posY-=Y_PAGE_MOVE;
                 case SB_LINEDOWN:
-                    posY=max(0,posY-10);
+                    posY=max(0,posY-Y_LINE_MOVE);
                     break;
                 case SB_PAGEUP:
-                    posY+=15;
+                    posY+=Y_PAGE_MOVE;
                 case SB_LINEUP:
-                    posY=min(200,posY+10);
+                    posY=min(200,posY+Y_LINE_MOVE);
                     break;
                 case SB_TOP:
                     posY=200;
@@ -184,14 +184,14 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             switch(LOWORD(wParam))
                 {
                 case SB_PAGELEFT:
-                    posX-=15;
+                    posX-=X_PAGE_MOVE;
                 case SB_LINELEFT:
-                    posX=max(0,posX-10);
+                    posX=max(0,posX-X_LINE_MOVE);
                     break;
                 case SB_PAGERIGHT:
-                    posX+=15;
+                    posX+=X_PAGE_MOVE;
                 case SB_LINERIGHT:
-                    posX=min(200,posX+10);
+                    posX=min(200,posX+X_LINE_MOVE);
                     break;
                 case SB_RIGHT:
                     posX=200;
@@ -243,11 +243,11 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             switch(wParam)
             {
-               case 0x4C:
+               case KEY_L:
                    if(GetAsyncKeyState(VK_LSHIFT)) SetFocus(hwndListPeople);
                break;
 
-               case 0x53:
+               case KEY_S:
                    if(GetAsyncKeyState(VK_LCONTROL)) {
                    SetFocus(hwndScrollColor);
                    }
@@ -298,7 +298,7 @@ CreateChildren(const HINSTANCE& hInst,const HWND& hwnd){
 }
 
 LRESULT CALLBACK ListProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-    if(message==WM_KEYDOWN && wParam==0x53)
+    if(message==WM_KEYDOWN && wParam==KEY_S)
     {
         if(GetAsyncKeyState(VK_LCONTROL)) SetFocus(hwndScrollColor);
         else SetFocus(hwndListPeople);
@@ -333,7 +333,7 @@ BOOL CALLBACK    InfoDlgProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lParam)
 }
 
 LRESULT CALLBACK ScrollProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    if(message==WM_KEYDOWN && wParam==0x4C)
+    if(message==WM_KEYDOWN && wParam==KEY_L)
     {
         if(GetAsyncKeyState(VK_LSHIFT)) SetFocus(hwndListPeople);
         else SetFocus(hwndScrollColor);
