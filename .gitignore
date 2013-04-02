@@ -29,3 +29,6 @@ Compiled Object files
 
 #Project files 
 
+#Bin folder
+bin
+obj
