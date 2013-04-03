@@ -1,0 +1,6 @@
+#define ID_SWITCH_SQUARE 301
+#define ID_SWITCH_CIRCLE 302
+#define ID_SWITCH_BEZIER 303
+
+
+#define LOGO 1001

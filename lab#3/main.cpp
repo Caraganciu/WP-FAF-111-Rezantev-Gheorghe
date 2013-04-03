@@ -1,10 +1,7 @@
 #include <windows.h>
 #include <math.h>
 #include <stdio.h>
-
-#define ID_SWITCH_SQUARE 301
-#define ID_SWITCH_CIRCLE 302
-#define ID_SWITCH_BEZIER 303
+#include "resources.h"
 
 
 /*  Declare Windows procedure  */
@@ -89,14 +86,20 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {   PAINTSTRUCT ps;
     RECT rect;
-    static BOOL drawing_circle=FALSE,drawing_square=FALSE,drawing_bezier=FALSE;
-    static HDC hdc;
+    static BOOL drawing_circle=FALSE,drawing_square=FALSE,drawing_bezier=TRUE,first_point=TRUE,button_pressed=FALSE;
+    static HDC hdc,hdcMem;
+    static HBITMAP hBitmap;
+    BITMAP bitmap;
+    static int figureCount=0;
+    static POINT arrayPoints[100][5];
     static POINT bez[4];
     switch (message)                  /* handle the messages */
     {
         case WM_CREATE:
             GetClientRect(hwnd,&rect);
             CreateButtons(hwnd,rect);
+            hBitmap = LoadBitmap(hInst,MAKEINTRESOURCE(LOGO));
+            GetObject(hBitmap,sizeof(BITMAP),&bitmap);
             break;
 
         case WM_SIZE:
@@ -136,21 +139,113 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             }
             break;
+        case WM_RBUTTONDOWN:
+            figureCount--;
+            if(figureCount<0) figureCount=0;
+            InvalidateRect(hwnd,NULL,TRUE);
+            break;
 
         case WM_MOUSEMOVE:
+            if(button_pressed){
+            GetClientRect(hwnd,&rect);
+            if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
+                (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+            if (drawing_square) {
+            hdc=GetDC(hwnd);
+            Rectangle(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,LOWORD(lParam),HIWORD(lParam));
+            ReleaseDC(hwnd,hdc);
+            }
+            }
             break;
 
         case WM_LBUTTONDOWN:
+            button_pressed=TRUE;
             GetClientRect(hwnd,&rect);
             hdc=GetDC(hwnd);
-            if(LOWORD(lParam)<rect.right*3/4-10 && LOWORD(lParam)>rect.right/4+10) {
-                SetPixel(hdc,LOWORD(lParam),HIWORD(lParam),RGB(155,21,12));
+
+            if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
+                (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+
+            if (drawing_square) {
+                arrayPoints[figureCount][4].x=ID_SWITCH_SQUARE;
+                arrayPoints[figureCount][0].x=LOWORD(lParam);
+                arrayPoints[figureCount][0].y=HIWORD(lParam);
+            }
+
+            if (drawing_bezier && first_point) {
+                arrayPoints[figureCount][4].x=ID_SWITCH_BEZIER;
+                arrayPoints[figureCount][0].x=LOWORD(lParam);
+                arrayPoints[figureCount][0].y=HIWORD(lParam);
+                first_point=FALSE;
+            } else if (drawing_bezier) {
+                first_point=TRUE;
+                figureCount--;
+                arrayPoints[figureCount][2].x=LOWORD(lParam);
+                arrayPoints[figureCount][2].y=HIWORD(lParam);
+            }
+
+            if (drawing_circle) {
+                arrayPoints[figureCount][4].x=ID_SWITCH_CIRCLE;
+                arrayPoints[figureCount][0].x=LOWORD(lParam);
+                arrayPoints[figureCount][0].y=HIWORD(lParam);
             }
             ReleaseDC(hwnd,hdc);
             break;
+
+        case WM_LBUTTONUP:
+            button_pressed=FALSE;
+            GetClientRect(hwnd,&rect);
+            hdc=GetDC(hwnd);
+            if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
+                (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+            if (drawing_square) {
+                arrayPoints[figureCount][1].x=LOWORD(lParam);
+                arrayPoints[figureCount][1].y=HIWORD(lParam);
+            }
+
+            if (drawing_bezier && !first_point) {
+                arrayPoints[figureCount][1].x=LOWORD(lParam);
+                arrayPoints[figureCount][1].y=HIWORD(lParam);
+                MoveToEx(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,NULL);
+                LineTo(hdc,arrayPoints[figureCount][1].x,arrayPoints[figureCount][1].y);
+            } else if (drawing_bezier) {
+                arrayPoints[figureCount][3].x=LOWORD(lParam);
+                arrayPoints[figureCount][3].y=HIWORD(lParam);
+                MoveToEx(hdc,arrayPoints[figureCount][2].x,arrayPoints[figureCount][2].y,NULL);
+                LineTo(hdc,arrayPoints[figureCount][3].x,arrayPoints[figureCount][3].y);
+                InvalidateRect(hwnd,NULL,TRUE);
+            }
+
+            if (drawing_circle) {
+                arrayPoints[figureCount][1].x=LOWORD(lParam);
+                arrayPoints[figureCount][1].y=HIWORD(lParam);
+            }
+            figureCount++;
+            ReleaseDC(hwnd,hdc);
+            if (!drawing_bezier) {
+            InvalidateRect(hwnd,NULL,TRUE);
+            }
+            break;
+
         case WM_PAINT:
             hdc=BeginPaint(hwnd,&ps);
             GetClientRect(hwnd,&rect);
+            //Create figures
+            SelectObject(hdc,GetStockObject(NULL_BRUSH));
+            for (int i=0;i<figureCount;i++) {
+                switch(arrayPoints[i][4].x){
+                case ID_SWITCH_SQUARE:
+                Rectangle(hdc,arrayPoints[i][0].x,arrayPoints[i][0].y,arrayPoints[i][1].x,arrayPoints[i][1].y);
+                break;
+                case ID_SWITCH_CIRCLE:
+                Ellipse(hdc,arrayPoints[i][0].x,arrayPoints[i][0].y,arrayPoints[i][1].x,arrayPoints[i][1].y);
+                break;
+                case ID_SWITCH_BEZIER:
+                PolyBezier(hdc,arrayPoints[i],4);
+                break;
+                }
+            }
+            SelectObject(hdc,GetStockObject(WHITE_BRUSH));
             //Create the gradients
             CreateGradient(hdc,1,1,rect.right/4+10,rect.bottom);
             CreateGradient(hdc,rect.right*3/4-10,1,rect.right,rect.bottom);
@@ -160,17 +255,11 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             DrawTheLines(hdc,rect);
             //Adds figures to the mix
             DrawGeometry(hdc,rect);
-            //Draw the bezier curve
-            bez[0].x=1;
-            bez[0].y=1;
-            bez[1].x=rect.right/8;
-            bez[1].y=rect.bottom/6;
-            bez[2].x=1;
-            bez[2].y=rect.bottom/4;
-            bez[3].x=rect.right/8;
-            bez[3].y=rect.bottom/4;
-            PolyBezier(hdc,bez,4);
-            TextOut(hdc,rect.right/16+2,rect.bottom/4,"Bezie Curve",11);
+            //Make Logo
+            hdcMem = CreateCompatibleDC(hdc);
+            SelectObject(hdcMem,hBitmap);
+            BitBlt(hdc,rect.right/4+16,6,185,120,hdcMem,0,0,SRCCOPY);
+            DeleteDC(hdcMem);
             EndPaint(hwnd,&ps);
             break;
 
@@ -245,15 +334,15 @@ DrawTheLines(const HDC & hdc,const RECT& rect) {
 void
 DrawTheWorkingArea(const HDC& hdc,const RECT& rect) {
     HPEN hPen;
-    hPen=CreatePen(PS_DOT,1,RGB(15,15,15));
+    hPen=CreatePen(PS_DASHDOTDOT,1,RGB(15,15,15));
     SelectObject(hdc,hPen);
-    Rectangle(hdc,rect.right/4+12,2,rect.right*3/4-12,rect.bottom-2);
-    Rectangle(hdc,rect.right/4+14,4,rect.right*3/4-14,rect.bottom-4);
+    Rectangle(hdc,rect.right/4+12,126,rect.right*3/4-12,rect.bottom-2);
+    Rectangle(hdc,rect.right/4+14,128,rect.right*3/4-14,rect.bottom-4);
     DeleteObject(hPen);
     SelectObject(hdc,GetStockObject(BLACK_PEN));
     SelectObject(hdc,GetStockObject(NULL_BRUSH));
-    Rectangle(hdc,0,0,rect.right/4+10,rect.bottom);
-    Rectangle(hdc,rect.right*3/4-10,0,rect.right,rect.bottom);
+    //Rectangle(hdc,0,0,rect.right/4+10,rect.bottom);
+    //Rectangle(hdc,rect.right*3/4-10,0,rect.right,rect.bottom);
 }
 
 void
@@ -301,7 +390,7 @@ void
 CreateGradient(const HDC & hdc,const int xInit,const int yInit,const int xFin,const int yFin) {
     HBRUSH hBrush;
     for(int i=0;i<256;i++){
-        hBrush=CreateSolidBrush(RGB(100,i,255));
+        hBrush=CreateSolidBrush(RGB(i,i,255));
         SelectObject(hdc,hBrush);
         SelectObject(hdc,GetStockObject(NULL_PEN));
         Rectangle(hdc,xInit,yInit,xFin,yFin-i*(yFin)/255);
@@ -315,15 +404,16 @@ CreateGradient(const HDC & hdc,const int xInit,const int yInit,const int xFin,co
 void
 CreateButtons(const HWND& hwnd,const RECT& rect){
     hwndSquareButton = CreateWindowEx((DWORD)NULL,TEXT("button"),
-                                      TEXT("Square"),WS_CHILD|WS_VISIBLE|BS_RADIOBUTTON,
+                                      TEXT("Rectangle"),WS_CHILD|WS_VISIBLE|BS_RADIOBUTTON,
                                       rect.right*3/4,rect.bottom/32,rect.right/8,30,hwnd,(HMENU)ID_SWITCH_SQUARE,
                                       hInst,NULL);
     hwndCircleButton = CreateWindowEx((DWORD)NULL,TEXT("button"),
-                                      TEXT("Circle"),WS_CHILD|WS_VISIBLE|BS_RADIOBUTTON,
+                                      TEXT("Ellipse"),WS_CHILD|WS_VISIBLE|BS_RADIOBUTTON,
                                       rect.right*7/8,rect.bottom/32,rect.right/8,30,hwnd,(HMENU)ID_SWITCH_CIRCLE,
                                       hInst,NULL);
     hwndBezierButton = CreateWindowEx((DWORD)NULL,TEXT("button"),
                                       TEXT("Bezier"),WS_CHILD|WS_VISIBLE|BS_RADIOBUTTON,
                                       rect.right*3/4,rect.bottom/8,rect.right/8,30,hwnd,(HMENU)ID_SWITCH_BEZIER,
                                       hInst,NULL);
+    SendMessage(hwndBezierButton,BM_SETCHECK,1,0);
 }
