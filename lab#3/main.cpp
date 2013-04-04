@@ -87,11 +87,11 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps;
-    static RECT rect,oldRect;
+    static RECT rect,oldRect,invalidationRect;
     static BOOL drawing_circle=FALSE,drawing_square=FALSE,drawing_bezier=TRUE,        //Checks what is being drawn at the moment
     first_point=TRUE,                                                                 //Checks if the first point of the bezier is being drawn
-    button_pressed_in_area=FALSE;                                                     //Checks if the button was pressed and if it happened inside the drawing area
-
+    button_pressed_in_area=FALSE,                                                     //Checks if the button was pressed and if it happened inside the drawing area
+    mouse_moving=FALSE;
     static HDC hdc,
     hdcMem;
     static HBITMAP hBitmap;
@@ -100,8 +100,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     static int figureCount=0;                                                         //Counts the number of figures in the drawing area
     static POINT arrayPoints[100][5];                                                 //The array that holds the data of the figures
 
-    static float xDisp,yDisp;
-
+    static float xDisp,yDisp,slope,displacement;
+    static int xFin=0,yFin=0,xFinSecond=0,yFinSecond=0;
+    static int resizeCount;
     switch (message)                  /* handle the messages */
     {
         case WM_CREATE:
@@ -123,14 +124,17 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             //Set the displacement of the drawings inside the window to new , moved coordinates
             xDisp=(float)rect.right/oldRect.right;
             yDisp=(float)rect.bottom/oldRect.bottom;
-            oldRect.right=rect.right;
+
+
             oldRect.bottom=rect.bottom;
+            oldRect.right=rect.right;
             for(int i=0;i<figureCount;i++) {
                 for(int j=0;j<4;j++) {
                     arrayPoints[i][j].x*=xDisp;
                     arrayPoints[i][j].y*=yDisp;
                 }
             }
+
 
             InvalidateRect(hwnd,NULL,TRUE);
             break;
@@ -168,34 +172,60 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
         case WM_RBUTTONDOWN:
 
+            GetClientRect(hwnd,&rect);
+            invalidationRect.right=rect.right*3/4-16;
+            invalidationRect.top=rect.top+130;
+            invalidationRect.bottom=rect.bottom-5;
+            invalidationRect.left=rect.right*1/4+16;
+
             figureCount--;
             if(figureCount<0) figureCount=0;
-            InvalidateRect(hwnd,NULL,TRUE);
+            InvalidateRect(hwnd,&invalidationRect,TRUE);
 
             break;
 
         case WM_MOUSEMOVE:
 
             if(!button_pressed_in_area) break;
+            mouse_moving=TRUE;
 
-            //Checks if the moving is being done in the drawing area
             GetClientRect(hwnd,&rect);
-            if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
-                (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+            invalidationRect.right=rect.right*3/4-16;
+            invalidationRect.top=rect.top+130;
+            invalidationRect.bottom=rect.bottom-5;
+            invalidationRect.left=rect.right*1/4+16;
+             //Checks if the moving is being done in the drawing area
+            if ((LOWORD(lParam)<rect.right/4+20) || (LOWORD(lParam)>rect.right*3/4-20) ||
+                (HIWORD(lParam)<135) || (HIWORD(lParam)>rect.bottom-6)) {SendMessage(hwnd,WM_LBUTTONUP,NULL,lParam) ;break;}
 
+            hdc=GetDC(hwnd);
+
+            if (drawing_circle) {
+            xFin=LOWORD(lParam);
+            yFin=HIWORD(lParam);
+            }
 
             if (drawing_square) {
-            hdc=GetDC(hwnd);
-            SelectObject(hdc,GetStockObject(NULL_BRUSH));
-            Rectangle(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,LOWORD(lParam),HIWORD(lParam));
-            ReleaseDC(hwnd,hdc);
+            xFin=LOWORD(lParam);
+            yFin=HIWORD(lParam);
             }
+
+            if (drawing_bezier && !first_point) {
+               xFin=LOWORD(lParam);
+               yFin=HIWORD(lParam);
+            } else if (drawing_bezier) {
+               xFinSecond=LOWORD(lParam);
+               yFinSecond=HIWORD(lParam);
+            }
+
+            InvalidateRect(hwnd,&invalidationRect,TRUE);
+            ReleaseDC(hwnd,hdc);
 
             break;
 
         case WM_LBUTTONDOWN:
-
             //Checks if the button clicking is being done in the drawing area
+            SetFocus(hwnd);
             GetClientRect(hwnd,&rect);
             if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
                 (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
@@ -231,10 +261,15 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
         case WM_LBUTTONUP:
             if(!button_pressed_in_area) break;
+            mouse_moving=FALSE;
             //Check if drawing in the needed area
             GetClientRect(hwnd,&rect);
-            if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
-                (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+            invalidationRect.right=rect.right*3/4-16;
+            invalidationRect.top=rect.top+130;
+            invalidationRect.bottom=rect.bottom-5;
+            invalidationRect.left=rect.right*1/4+16;
+            //if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
+               // (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
 
 
 
@@ -248,27 +283,70 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if (drawing_bezier && !first_point) {
                 arrayPoints[figureCount][1].x=LOWORD(lParam);
                 arrayPoints[figureCount][1].y=HIWORD(lParam);
-                MoveToEx(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,NULL);
-                LineTo(hdc,arrayPoints[figureCount][1].x,arrayPoints[figureCount][1].y);
+
             } else if (drawing_bezier) {
                 arrayPoints[figureCount][3].x=LOWORD(lParam);
                 arrayPoints[figureCount][3].y=HIWORD(lParam);
-                MoveToEx(hdc,arrayPoints[figureCount][2].x,arrayPoints[figureCount][2].y,NULL);
-                LineTo(hdc,arrayPoints[figureCount][3].x,arrayPoints[figureCount][3].y);
-                InvalidateRect(hwnd,NULL,TRUE);
+                InvalidateRect(hwnd,&invalidationRect,TRUE);
             }
 
             if (drawing_circle) {
                 arrayPoints[figureCount][1].x=LOWORD(lParam);
                 arrayPoints[figureCount][1].y=HIWORD(lParam);
             }
+
             figureCount++;
-            ReleaseDC(hwnd,hdc);
+            button_pressed_in_area=FALSE;
+
             if (!drawing_bezier) {
-            InvalidateRect(hwnd,NULL,TRUE);
+               InvalidateRect(hwnd,&invalidationRect,TRUE);
             }
 
-            button_pressed_in_area=FALSE;
+            ReleaseDC(hwnd,hdc);
+
+            break;
+
+        case WM_KEYDOWN:
+
+            GetClientRect(hwnd,&rect);
+            invalidationRect.right=rect.right*3/4-16;
+            invalidationRect.top=rect.top+130;
+            invalidationRect.bottom=rect.bottom-5;
+            invalidationRect.left=rect.right*1/4+16;
+            switch(wParam) {
+            case VK_UP:
+            if (resizeCount<0) break;
+              for(int i=0;i<figureCount;i++) {
+                for(int j=0;j<4;j++) {
+
+                    slope=(arrayPoints[i][j].y-(rect.bottom-126)/2)/(float)(arrayPoints[i][j].x-rect.right/2);
+                    displacement=arrayPoints[i][j].y-slope*arrayPoints[i][j].x;
+
+                    arrayPoints[i][j].x=(rect.right/2)-(rect.right/2-arrayPoints[i][j].x)*1.1;
+                    arrayPoints[i][j].y=roundf(arrayPoints[i][j].x*slope+displacement);
+                }
+            }
+            resizeCount--;
+            break;
+
+            case VK_DOWN:
+              if(resizeCount>10) break;
+              for(int i=0;i<figureCount;i++) {
+                for(int j=0;j<4;j++) {
+
+                    slope=(arrayPoints[i][j].y-(rect.bottom-126)/2)/(float)(arrayPoints[i][j].x-rect.right/2);
+                    displacement=arrayPoints[i][j].y-slope*arrayPoints[i][j].x;
+
+                    arrayPoints[i][j].x=(rect.right/2)-(rect.right/2-arrayPoints[i][j].x)*0.9;
+                    arrayPoints[i][j].y=roundf(arrayPoints[i][j].x*slope+displacement);
+
+
+                }
+            }
+            resizeCount++;
+            break;
+            }
+            InvalidateRect(hwnd,&invalidationRect,TRUE);
             break;
 
         case WM_PAINT:
@@ -289,10 +367,31 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 }
             }
+            if (mouse_moving) {
+
+            if (drawing_circle) {
+                Ellipse(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,xFin,yFin);
+            }
+
+            if (drawing_bezier && !first_point) {
+                MoveToEx(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,NULL);
+                LineTo(hdc,xFin,yFin);
+            } else if (drawing_bezier) {
+                MoveToEx(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,NULL);
+                LineTo(hdc,xFin,yFin);
+
+                MoveToEx(hdc,arrayPoints[figureCount][2].x,arrayPoints[figureCount][2].y,NULL);
+                LineTo(hdc,xFinSecond,yFinSecond);
+            }
+
+            if (drawing_square) {
+            Rectangle(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,xFin,yFin);
+            }
+            }
             SelectObject(hdc,GetStockObject(WHITE_BRUSH));
             //Create the gradients
-            CreateGradient(hdc,1,1,rect.right/4+10,rect.bottom);
-            CreateGradient(hdc,rect.right*3/4-10,1,rect.right,rect.bottom);
+            CreateGradient(hdc,0,0,rect.right/4+10,rect.bottom+1);
+            CreateGradient(hdc,rect.right*3/4-10,0,rect.right+1,rect.bottom+1);
             //Creates the background for drawing
             DrawTheWorkingArea(hdc,rect);
             //Adds the lines to the drawing
