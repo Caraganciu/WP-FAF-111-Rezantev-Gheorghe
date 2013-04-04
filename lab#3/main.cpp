@@ -7,15 +7,16 @@
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+// All the functions i used mainly to make the code cleaner
 void DrawTheLines(const HDC &,const RECT&);
 void DrawTheWorkingArea(const HDC& ,const RECT& );
 void DrawGeometry(const HDC& ,const RECT& );
-void VertexSetup(const RECT&);
 void CreateGradient(const HDC &,const int ,const int ,const int ,const int );
 void CreateButtons(const HWND& ,const RECT&);
 
 /*  Make the class name into a global variable  */
 HINSTANCE hInst;
+// Create all the needed object handles
 HWND hwndSquareButton,hwndCircleButton,hwndBezierButton;
 char szClassName[ ] = "Lab#3";
 
@@ -87,29 +88,36 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps;
-    static RECT rect,oldRect,invalidationRect;
-    static BOOL drawing_circle=FALSE,drawing_square=FALSE,drawing_bezier=TRUE,        //Checks what is being drawn at the moment
-    first_point=TRUE,                                                                 //Checks if the first point of the bezier is being drawn
-    button_pressed_in_area=FALSE,                                                     //Checks if the button was pressed and if it happened inside the drawing area
-    mouse_moving=FALSE;
+    static RECT rect,oldRect,invalidationRect;                                //The oldRect is used for window resizing handling , the invalidationRect for invalidating only the drawing area
+    static BOOL drawing_circle=FALSE,drawing_square=TRUE,drawing_bezier=FALSE,//Checks what is being drawn at the moment
+    first_point=TRUE,                                                         //Checks if the first point of the bezier is being drawn
+    button_pressed_in_area=FALSE,                                             //Checks if the button was pressed and if it happened inside the drawing area
+    mouse_moving=FALSE;                                                       //Checks if the mouse is moving in order to paint the tracing of the object
+
     static HDC hdc,
     hdcMem;
     static HBITMAP hBitmap;
     BITMAP bitmap;
 
-    static int figureCount=0;                                                         //Counts the number of figures in the drawing area
-    static POINT arrayPoints[100][5];                                                 //The array that holds the data of the figures
+    static int figureCount=0;                                                  //Counts the number of figures in the drawing area
+    static POINT arrayPoints[100][5];                                          //The array that holds the data of the figures
 
-    static float xDisp,yDisp,slope,displacement;
-    static int xFin=0,yFin=0,xFinSecond=0,yFinSecond=0;
-    static int resizeCount;
+    static float xDisp,yDisp,slope,displacement;                               //Used to move and resize the pictures drawn . The last two variables are used to calculate the function
+                                                                               //that the points will move on when resizing (the resize is a convergence towards the center)
+    static int xFin=0,yFin=0,xFinSecond=0,yFinSecond=0;                        //Used to draw the tracing of elemens with the last two needed for Bezier only
+    static int resizeCount;                                                    //Used to limit the resize to a certain number of times
+
+
     switch (message)                  /* handle the messages */
     {
         case WM_CREATE:
 
             GetClientRect(hwnd,&rect);
+            //oldRect gets the same value as current rect as to avoid division by 0 and unintended resizing at the beginning
             oldRect=rect;
+            //Creates the needed switches
             CreateButtons(hwnd,rect);
+            // Loads the bitmap from resources
             hBitmap = LoadBitmap(hInst,MAKEINTRESOURCE(LOGO));
             GetObject(hBitmap,sizeof(BITMAP),&bitmap);
             break;
@@ -125,9 +133,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             xDisp=(float)rect.right/oldRect.right;
             yDisp=(float)rect.bottom/oldRect.bottom;
 
-
             oldRect.bottom=rect.bottom;
             oldRect.right=rect.right;
+
             for(int i=0;i<figureCount;i++) {
                 for(int j=0;j<4;j++) {
                     arrayPoints[i][j].x*=xDisp;
@@ -135,12 +143,11 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 }
             }
 
-
             InvalidateRect(hwnd,NULL,TRUE);
             break;
 
         case WM_COMMAND:
-
+            //Sets the buttons to active and puts the flags in the needed positions
             switch(wParam)
             {
                 case ID_SWITCH_CIRCLE:
@@ -171,35 +178,34 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
 
         case WM_RBUTTONDOWN:
-
+            //The setting up of invalidation region
             GetClientRect(hwnd,&rect);
             invalidationRect.right=rect.right*3/4-16;
             invalidationRect.top=rect.top+130;
             invalidationRect.bottom=rect.bottom-5;
             invalidationRect.left=rect.right*1/4+16;
-
+            //The deletion a figure and refreshing the picture
             figureCount--;
             if(figureCount<0) figureCount=0;
             InvalidateRect(hwnd,&invalidationRect,TRUE);
-
             break;
 
         case WM_MOUSEMOVE:
-
+            //Exits case in case the mouse is out of the needed area
             if(!button_pressed_in_area) break;
             mouse_moving=TRUE;
-
+            //invalidation
             GetClientRect(hwnd,&rect);
             invalidationRect.right=rect.right*3/4-16;
             invalidationRect.top=rect.top+130;
             invalidationRect.bottom=rect.bottom-5;
             invalidationRect.left=rect.right*1/4+16;
-             //Checks if the moving is being done in the drawing area
+             //Checks if the moving is being done in the drawing area and ends drawing in case it isn't
             if ((LOWORD(lParam)<rect.right/4+20) || (LOWORD(lParam)>rect.right*3/4-20) ||
                 (HIWORD(lParam)<135) || (HIWORD(lParam)>rect.bottom-6)) {SendMessage(hwnd,WM_LBUTTONUP,NULL,lParam) ;break;}
 
             hdc=GetDC(hwnd);
-
+            //Depending on the selected drawing sets the points for the tracing of figures
             if (drawing_circle) {
             xFin=LOWORD(lParam);
             yFin=HIWORD(lParam);
@@ -217,14 +223,14 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                xFinSecond=LOWORD(lParam);
                yFinSecond=HIWORD(lParam);
             }
-
+            //Send message to repaint drawing area
             InvalidateRect(hwnd,&invalidationRect,TRUE);
             ReleaseDC(hwnd,hdc);
 
             break;
 
         case WM_LBUTTONDOWN:
-            //Checks if the button clicking is being done in the drawing area
+            //Checks if the button clicking is being done in the drawing area and sets focus to main window
             SetFocus(hwnd);
             GetClientRect(hwnd,&rect);
             if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
@@ -232,7 +238,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             button_pressed_in_area=TRUE;
             hdc=GetDC(hwnd);
-
+            //Gets initial points for the figure being drawn and sets a information value in order to read the right thing from the array afterwards
             if (drawing_square) {
                 arrayPoints[figureCount][4].x=ID_SWITCH_SQUARE;
                 arrayPoints[figureCount][0].x=LOWORD(lParam);
@@ -260,21 +266,18 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
 
         case WM_LBUTTONUP:
+            //Makes sure the drawing started inside the canvas
             if(!button_pressed_in_area) break;
             mouse_moving=FALSE;
-            //Check if drawing in the needed area
+            //invalidation
             GetClientRect(hwnd,&rect);
             invalidationRect.right=rect.right*3/4-16;
             invalidationRect.top=rect.top+130;
             invalidationRect.bottom=rect.bottom-5;
             invalidationRect.left=rect.right*1/4+16;
-            //if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
-               // (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
-
-
 
             hdc=GetDC(hwnd);
-
+            //Gets the end points of the figures
             if (drawing_square) {
                 arrayPoints[figureCount][1].x=LOWORD(lParam);
                 arrayPoints[figureCount][1].y=HIWORD(lParam);
@@ -294,10 +297,10 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 arrayPoints[figureCount][1].x=LOWORD(lParam);
                 arrayPoints[figureCount][1].y=HIWORD(lParam);
             }
-
+            //Increments nr of figures
             figureCount++;
             button_pressed_in_area=FALSE;
-
+            //The bezier uses 4 points instead of 2 like the others so different actions when invalidating
             if (!drawing_bezier) {
                InvalidateRect(hwnd,&invalidationRect,TRUE);
             }
@@ -307,14 +310,16 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
 
         case WM_KEYDOWN:
-
+            //invalidation
             GetClientRect(hwnd,&rect);
             invalidationRect.right=rect.right*3/4-16;
             invalidationRect.top=rect.top+130;
             invalidationRect.bottom=rect.bottom-5;
             invalidationRect.left=rect.right*1/4+16;
+            //Resizes canvas based on convergence on the line formed by the center point of the canvas and a point of the figure
             switch(wParam) {
             case VK_UP:
+
             if (resizeCount<0) break;
               for(int i=0;i<figureCount;i++) {
                 for(int j=0;j<4;j++) {
@@ -330,6 +335,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
 
             case VK_DOWN:
+
               if(resizeCount>10) break;
               for(int i=0;i<figureCount;i++) {
                 for(int j=0;j<4;j++) {
@@ -367,6 +373,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 }
             }
+            //Create traces
             if (mouse_moving) {
 
             if (drawing_circle) {
@@ -387,7 +394,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if (drawing_square) {
             Rectangle(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,xFin,yFin);
             }
+
             }
+
             SelectObject(hdc,GetStockObject(WHITE_BRUSH));
             //Create the gradients
             CreateGradient(hdc,0,0,rect.right/4+10,rect.bottom+1);
@@ -398,7 +407,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             DrawTheLines(hdc,rect);
             //Adds figures to the mix
             DrawGeometry(hdc,rect);
-            //Make Logo
+            //Make bmp
             hdcMem = CreateCompatibleDC(hdc);
             SelectObject(hdcMem,hBitmap);
             BitBlt(hdc,rect.right/4+16,6,185,120,hdcMem,0,0,SRCCOPY);
@@ -473,7 +482,7 @@ DrawTheLines(const HDC & hdc,const RECT& rect) {
 
 }
 
-
+// Creates pretty rectangles and stuff for the canvas image
 void
 DrawTheWorkingArea(const HDC& hdc,const RECT& rect) {
     HPEN hPen;
@@ -496,6 +505,7 @@ DrawTheWorkingArea(const HDC& hdc,const RECT& rect) {
 
 }
 
+//Adds lines and figures that are on the gradients
 void
 DrawGeometry(const HDC& hdc,const RECT& rect) {
     HPEN hPen;
@@ -537,6 +547,7 @@ DrawGeometry(const HDC& hdc,const RECT& rect) {
     SelectObject(hdc,GetStockObject(NULL_BRUSH));
 }
 
+//Creates the side gradients
 void
 CreateGradient(const HDC & hdc,const int xInit,const int yInit,const int xFin,const int yFin) {
     HBRUSH hBrush;
@@ -552,6 +563,7 @@ CreateGradient(const HDC & hdc,const int xInit,const int yInit,const int xFin,co
     SelectObject(hdc,GetStockObject(BLACK_PEN));
 }
 
+//Buttons
 void
 CreateButtons(const HWND& hwnd,const RECT& rect){
     hwndSquareButton = CreateWindowEx((DWORD)NULL,TEXT("button"),
@@ -566,5 +578,5 @@ CreateButtons(const HWND& hwnd,const RECT& rect){
                                       TEXT("Bezier"),WS_CHILD|WS_VISIBLE|BS_RADIOBUTTON,
                                       rect.right*3/4,rect.bottom/8,rect.right/8,30,hwnd,(HMENU)ID_SWITCH_BEZIER,
                                       hInst,NULL);
-    SendMessage(hwndBezierButton,BM_SETCHECK,1,0);
+    SendMessage(hwndSquareButton,BM_SETCHECK,1,0);
 }
