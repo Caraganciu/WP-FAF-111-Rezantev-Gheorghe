@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <math.h>
 #include <stdio.h>
+
 #include "resources.h"
 
 
@@ -52,7 +53,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     hwnd = CreateWindowEx (
            0,                   /* Extended possibilites for variation */
            szClassName,         /* Classname */
-           "Graphics",       /* Title Text */
+           "Graphics",          /* Title Text */
            WS_OVERLAPPEDWINDOW, /* default window */
            CW_USEDEFAULT,       /* Windows decides the position */
            CW_USEDEFAULT,       /* where the window ends up on the screen */
@@ -84,33 +85,58 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 /*  This function is called by the Windows function DispatchMessage()  */
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{   PAINTSTRUCT ps;
-    RECT rect;
-    static BOOL drawing_circle=FALSE,drawing_square=FALSE,drawing_bezier=TRUE,first_point=TRUE,button_pressed=FALSE;
-    static HDC hdc,hdcMem;
+{
+    PAINTSTRUCT ps;
+    static RECT rect,oldRect;
+    static BOOL drawing_circle=FALSE,drawing_square=FALSE,drawing_bezier=TRUE,        //Checks what is being drawn at the moment
+    first_point=TRUE,                                                                 //Checks if the first point of the bezier is being drawn
+    button_pressed_in_area=FALSE;                                                     //Checks if the button was pressed and if it happened inside the drawing area
+
+    static HDC hdc,
+    hdcMem;
     static HBITMAP hBitmap;
     BITMAP bitmap;
-    static int figureCount=0;
-    static POINT arrayPoints[100][5];
-    static POINT bez[4];
+
+    static int figureCount=0;                                                         //Counts the number of figures in the drawing area
+    static POINT arrayPoints[100][5];                                                 //The array that holds the data of the figures
+
+    static float xDisp,yDisp;
+
     switch (message)                  /* handle the messages */
     {
         case WM_CREATE:
+
             GetClientRect(hwnd,&rect);
+            oldRect=rect;
             CreateButtons(hwnd,rect);
             hBitmap = LoadBitmap(hInst,MAKEINTRESOURCE(LOGO));
             GetObject(hBitmap,sizeof(BITMAP),&bitmap);
             break;
 
         case WM_SIZE:
+
             GetClientRect(hwnd,&rect);
+            //Resizes all buttons based on the window size
             MoveWindow(hwndSquareButton,rect.right*3/4,rect.bottom/32,rect.right/8,30,TRUE);
             MoveWindow(hwndCircleButton,rect.right*7/8,rect.bottom/32,rect.right/8,30,TRUE);
             MoveWindow(hwndBezierButton,rect.right*3/4,rect.bottom/8,rect.right/8,30,TRUE);
+            //Set the displacement of the drawings inside the window to new , moved coordinates
+            xDisp=(float)rect.right/oldRect.right;
+            yDisp=(float)rect.bottom/oldRect.bottom;
+            oldRect.right=rect.right;
+            oldRect.bottom=rect.bottom;
+            for(int i=0;i<figureCount;i++) {
+                for(int j=0;j<4;j++) {
+                    arrayPoints[i][j].x*=xDisp;
+                    arrayPoints[i][j].y*=yDisp;
+                }
+            }
+
             InvalidateRect(hwnd,NULL,TRUE);
             break;
 
         case WM_COMMAND:
+
             switch(wParam)
             {
                 case ID_SWITCH_CIRCLE:
@@ -139,32 +165,43 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             }
             break;
+
         case WM_RBUTTONDOWN:
+
             figureCount--;
             if(figureCount<0) figureCount=0;
             InvalidateRect(hwnd,NULL,TRUE);
+
             break;
 
         case WM_MOUSEMOVE:
-            if(button_pressed){
+
+            if(!button_pressed_in_area) break;
+
+            //Checks if the moving is being done in the drawing area
             GetClientRect(hwnd,&rect);
             if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
                 (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+
+
             if (drawing_square) {
             hdc=GetDC(hwnd);
+            SelectObject(hdc,GetStockObject(NULL_BRUSH));
             Rectangle(hdc,arrayPoints[figureCount][0].x,arrayPoints[figureCount][0].y,LOWORD(lParam),HIWORD(lParam));
             ReleaseDC(hwnd,hdc);
             }
-            }
+
             break;
 
         case WM_LBUTTONDOWN:
-            button_pressed=TRUE;
-            GetClientRect(hwnd,&rect);
-            hdc=GetDC(hwnd);
 
+            //Checks if the button clicking is being done in the drawing area
+            GetClientRect(hwnd,&rect);
             if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
                 (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+
+            button_pressed_in_area=TRUE;
+            hdc=GetDC(hwnd);
 
             if (drawing_square) {
                 arrayPoints[figureCount][4].x=ID_SWITCH_SQUARE;
@@ -193,11 +230,16 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
 
         case WM_LBUTTONUP:
-            button_pressed=FALSE;
+            if(!button_pressed_in_area) break;
+            //Check if drawing in the needed area
             GetClientRect(hwnd,&rect);
-            hdc=GetDC(hwnd);
             if ((LOWORD(lParam)<rect.right/4+14) || (LOWORD(lParam)>rect.right*3/4-14) ||
                 (HIWORD(lParam)<125) || (HIWORD(lParam)>rect.bottom-6)) break;
+
+
+
+            hdc=GetDC(hwnd);
+
             if (drawing_square) {
                 arrayPoints[figureCount][1].x=LOWORD(lParam);
                 arrayPoints[figureCount][1].y=HIWORD(lParam);
@@ -225,6 +267,8 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if (!drawing_bezier) {
             InvalidateRect(hwnd,NULL,TRUE);
             }
+
+            button_pressed_in_area=FALSE;
             break;
 
         case WM_PAINT:
@@ -334,15 +378,23 @@ DrawTheLines(const HDC & hdc,const RECT& rect) {
 void
 DrawTheWorkingArea(const HDC& hdc,const RECT& rect) {
     HPEN hPen;
+    hPen=CreatePen(PS_SOLID,5,RGB(255,255,255));
+    SelectObject(hdc,hPen);
+    SelectObject(hdc,GetStockObject(NULL_BRUSH));
+    Rectangle(hdc,rect.right/4+11,125,rect.right*3/4-11,rect.bottom);
+    DeleteObject(hPen);
+
     hPen=CreatePen(PS_DASHDOTDOT,1,RGB(15,15,15));
     SelectObject(hdc,hPen);
     Rectangle(hdc,rect.right/4+12,126,rect.right*3/4-12,rect.bottom-2);
     Rectangle(hdc,rect.right/4+14,128,rect.right*3/4-14,rect.bottom-4);
     DeleteObject(hPen);
-    SelectObject(hdc,GetStockObject(BLACK_PEN));
-    SelectObject(hdc,GetStockObject(NULL_BRUSH));
-    //Rectangle(hdc,0,0,rect.right/4+10,rect.bottom);
-    //Rectangle(hdc,rect.right*3/4-10,0,rect.right,rect.bottom);
+
+    SelectObject(hdc,GetStockObject(NULL_PEN));
+    SelectObject(hdc,GetStockObject(WHITE_BRUSH));
+    Rectangle(hdc,rect.right/4+11,0,rect.right*3/4-11,124);
+
+
 }
 
 void
