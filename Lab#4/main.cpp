@@ -1,4 +1,5 @@
 #include <windows.h>
+#include "objects.h"
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
