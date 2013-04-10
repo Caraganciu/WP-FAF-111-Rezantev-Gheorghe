@@ -15,9 +15,9 @@ protected:
 
     COLORREF clr;
 public:
-    POINT *vertixes;
+    POINT center;
     int xSpeed,ySpeed;
-    Objects(POINT vertixes[2],const int &speed);
+    Objects(POINT center,const int &speed);
     bool Accelerate(const int& deltaSpeedX,const int& deltaSpeedY);
     bool Color(const COLORREF &clr);
     bool Collision(const RECT &rect);
@@ -28,7 +28,7 @@ class Circle : public Objects {
 
 public:
 
-    Circle(POINT vertixes[2],const int &speed): Objects(vertixes,speed)
+    Circle(POINT center,const int &speed): Objects(center,speed)
     {
         cout<<"creation success";
     }

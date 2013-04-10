@@ -1,7 +1,7 @@
 #include "objects.h"
 
-Objects::Objects(POINT vertixes[2],const int &speed) {
-    this->vertixes=vertixes;
+Objects::Objects(POINT center,const int &speed) {
+    this->center=center;
     this->xSpeed=speed;
     this->ySpeed=speed;
     clr=RGB(0,0,0);
@@ -23,7 +23,8 @@ bool Circle::Move(const HDC &hdc,const RECT& rect,HBRUSH &hBrush) {
     hBrush=CreateSolidBrush(clr);
     SelectObject(hdc,hBrush);
     Collision(rect);
-    Ellipse(hdc,vertixes[0].x+=xSpeed,vertixes[0].y+=ySpeed,vertixes[1].x+=xSpeed,vertixes[1].y+=ySpeed);
+    center.x+=xSpeed; center.y+=ySpeed;
+    Ellipse(hdc,center.x-30,center.y-30,center.x+30,center.y+30);
 
     SelectObject(hdc,GetStockObject(WHITE_BRUSH));
     DeleteObject(hBrush);
@@ -33,10 +34,10 @@ bool Circle::Move(const HDC &hdc,const RECT& rect,HBRUSH &hBrush) {
 
 bool Objects::Collision(const RECT &rect) {
 
-    if(vertixes[1].x>rect.right-10)  {xSpeed=-abs(xSpeed);}
-    if(vertixes[0].x<rect.left+10)   {xSpeed=abs(xSpeed);}
-    if(vertixes[1].y>rect.bottom-10) {ySpeed=-abs(ySpeed);}
-    if(vertixes[0].y<rect.top+10)    {ySpeed=abs(ySpeed);}
+    if(center.x+30>rect.right-1)  {xSpeed=-abs(xSpeed);}
+    if(center.x-30<rect.left+1)   {xSpeed=abs(xSpeed);}
+    if(center.y+30>rect.bottom-1) {ySpeed=-abs(ySpeed);}
+    if(center.y-30<rect.top+1)    {ySpeed=abs(ySpeed);}
 
     return TRUE;
 }
@@ -44,23 +45,15 @@ bool Objects::Collision(const RECT &rect) {
 bool Interaction(Objects &alfa,Objects &beta) {
     float distance;
     float angle;
-    POINT centerAlfa;
-    POINT centerBeta;
 
-    centerAlfa.x=alfa.vertixes[0].x+(alfa.vertixes[1].x-alfa.vertixes[0].x)/2;
-    centerAlfa.y=alfa.vertixes[0].y+(alfa.vertixes[1].y-alfa.vertixes[0].y)/2;
+    distance=sqrt( pow(alfa.center.x-beta.center.x,2)+ pow(alfa.center.y-beta.center.y,2) );
 
-    centerBeta.x=beta.vertixes[0].x+(beta.vertixes[1].x-beta.vertixes[0].x)/2;
-    centerBeta.y=beta.vertixes[0].y+(beta.vertixes[1].y-beta.vertixes[0].y)/2;
-
-    distance=sqrt( pow(centerAlfa.x-centerBeta.x,2)+ pow(centerAlfa.y-centerBeta.y,2) );
-
-    if ( distance-1 < (alfa.vertixes[1].x-alfa.vertixes[0].x+beta.vertixes[1].x-beta.vertixes[0].x)/2.0 ) {
-        angle=(centerBeta.y-centerAlfa.y)/(centerBeta.x-centerAlfa.x+0.0001);
+    if ( distance-1 < 60) {
+        angle=(beta.center.y-alfa.center.y)/(beta.center.x-alfa.center.x+0.0001);
     {
 
-    alfa.Accelerate(-2,-5);
-    beta.Accelerate(2,5);
+    alfa.Accelerate(-alfa.xSpeed,-alfa.ySpeed);
+    beta.Accelerate(-beta.xSpeed,-beta.ySpeed);
     }
     return TRUE;
 }

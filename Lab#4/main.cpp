@@ -44,8 +44,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            WS_OVERLAPPEDWINDOW, /* default window */
            CW_USEDEFAULT,       /* Windows decides the position */
            CW_USEDEFAULT,       /* where the window ends up on the screen */
-           544,                 /* The programs width */
-           375,                 /* and height in pixels */
+           800,                 /* The programs width */
+           600,                 /* and height in pixels */
            HWND_DESKTOP,        /* The window is a child-window to desktop */
            NULL,                /* No menu */
            hThisInstance,       /* Program Instance handler */
@@ -72,47 +72,75 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 /*  This function is called by the Windows function DispatchMessage()  */
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{   static HDC hdc;
+{   static HDC hdc,hdcMem;
     static PAINTSTRUCT ps;
     static RECT rect;
     static HBRUSH hBrush;
+    static HBITMAP hbmMem;
+    static HANDLE hOld;
+    static int timerSpeed=50,numberObjects=0;
+
     switch (message)                  /* handle the messages */
     {
           case WM_CREATE:
 
-            static POINT x[2];
-            x[0].y=50;
-            x[0].x=50;
-            x[1].y=80;
-            x[1].x=80;
-            objects[0]=new Circle(x,15);
-            static POINT y[2];
-            y[0].y=100;
-            y[0].x=100;
-            y[1].y=130;
-            y[1].x=130;
-            static Circle beta(y,10);
-            beta.Color(RGB(200,15,200));
-            static POINT z[2];
-            z[0].y=300;
-            z[0].x=300;
-            z[1].y=330;
-            z[1].x=330;
-            static Circle gama(z,10);
-            gama.Color(RGB(100,15,200));
-            SetTimer(hwnd,ID_TIMER,100,NULL);
+            hdc=GetDC(hwnd);
+            GetClientRect(hwnd,&rect);
+            hdcMem=CreateCompatibleDC(hdc);
+            hbmMem=CreateCompatibleBitmap(hdc,rect.right,rect.bottom);
+            hOld = SelectObject(hdcMem,hbmMem);
+
+
+            SetTimer(hwnd,ID_TIMER,timerSpeed,NULL);
+            break;
+
+
+        case WM_LBUTTONDOWN:
+            POINT newCenter;
+            newCenter.x=LOWORD(lParam);
+            newCenter.y=HIWORD(lParam);
+            objects[numberObjects]=new Circle(newCenter,5);
+            objects[numberObjects]->Color(RGB(newCenter.x%255,newCenter.x%125+newCenter.y%125,newCenter.y%255));
+            numberObjects++;
+            break;
+
+
+        case WM_MOUSEWHEEL:
+            if((short)HIWORD(wParam)>0) {
+                timerSpeed+=100;
+            }else {
+                timerSpeed-=100;
+                if (timerSpeed<0) timerSpeed=1;
+            }
+            KillTimer(hwnd,ID_TIMER);
+            SetTimer(hwnd,ID_TIMER,timerSpeed,NULL);
             break;
 
         case WM_PAINT:
 
             hdc=BeginPaint(hwnd,&ps);
             GetClientRect(hwnd,&rect);
-            Interaction(*objects[0],beta);
-            Interaction(*objects[0],gama);
-            Interaction(gama,beta);
-            objects[0]->Move(hdc,rect,hBrush);
-            beta.Move(hdc,rect,hBrush);
-            gama.Move(hdc,rect,hBrush);
+
+            for(int i=0;i<numberObjects-1;i++) {
+                for(int j=i+1;j<numberObjects;j++) {
+                    Interaction(*objects[i],*objects[j]);
+                }
+            }
+
+
+
+            Rectangle(hdcMem,0,0,rect.right,rect.bottom);
+
+            for(int i=0;i<numberObjects;i++)
+            {
+                objects[i]->Move(hdcMem,rect,hBrush);
+
+            }
+
+
+
+            BitBlt(hdc,0,0,rect.right,rect.bottom,hdcMem,0,0,SRCCOPY);
+
             EndPaint(hwnd,&ps);
 
             break;
@@ -121,6 +149,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             InvalidateRect(hwnd,NULL,TRUE);
             break;
         case WM_DESTROY:
+            SelectObject(hdcMem,hOld);
+            DeleteObject(hbmMem);
+            DeleteDC(hdcMem);
             KillTimer(hwnd,ID_TIMER);
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;
