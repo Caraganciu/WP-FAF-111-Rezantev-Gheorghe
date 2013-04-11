@@ -83,76 +83,92 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     switch (message)                  /* handle the messages */
     {
           case WM_CREATE:
-
+            //Gets device context of the window and the rectangle of the client area
             hdc=GetDC(hwnd);
             GetClientRect(hwnd,&rect);
+            //Generate the buffer memory using a bitmap akin memory data
             hdcMem=CreateCompatibleDC(hdc);
             hbmMem=CreateCompatibleBitmap(hdc,rect.right,rect.bottom);
             hOld = SelectObject(hdcMem,hbmMem);
-
-
+            //Sets the initial timer
             SetTimer(hwnd,ID_TIMER,timerSpeed,NULL);
             break;
 
-
+        case WM_SIZE:
+            //Destroy the double buffer memory and handle
+            SelectObject(hdcMem,hOld);
+            DeleteObject(hbmMem);
+            DeleteDC(hdcMem);
+            //Gets device context of the window and the rectangle of the client area
+            hdc=GetDC(hwnd);
+            GetClientRect(hwnd,&rect);
+            //Generate the buffer memory using a bitmap akin memory data
+            hdcMem=CreateCompatibleDC(hdc);
+            hbmMem=CreateCompatibleBitmap(hdc,rect.right,rect.bottom);
+            hOld = SelectObject(hdcMem,hbmMem);
+            break;
         case WM_LBUTTONDOWN:
+            //Reads the center of the circle from the mouse click data
             POINT newCenter;
             newCenter.x=LOWORD(lParam);
             newCenter.y=HIWORD(lParam);
-            objects[numberObjects]=new Circle(newCenter,5);
+            //Creates a new circle based on the mouse position data
+            objects[numberObjects]=new Circle(newCenter,5+newCenter.x%5);
             objects[numberObjects]->Color(RGB(newCenter.x%255,newCenter.x%125+newCenter.y%125,newCenter.y%255));
+            //Increments number of objects
             numberObjects++;
             break;
 
 
         case WM_MOUSEWHEEL:
-            if((short)HIWORD(wParam)>0) {
-                timerSpeed+=100;
+            //Checks if the mousewheel was scrolled down and decreases the speed and increases otherwise
+            if((short)HIWORD(wParam)<0) {
+                timerSpeed+=10;
             }else {
-                timerSpeed-=100;
+                timerSpeed-=10;
+            //Checks to see that the delay for the timer isn't negative
                 if (timerSpeed<0) timerSpeed=1;
             }
+            //Resets the timer
             KillTimer(hwnd,ID_TIMER);
             SetTimer(hwnd,ID_TIMER,timerSpeed,NULL);
             break;
 
         case WM_PAINT:
-
+            //Gets the device contexd handle and the rectangle area of the client
             hdc=BeginPaint(hwnd,&ps);
             GetClientRect(hwnd,&rect);
-
+            //Checks for interaction between all the objects in the array
             for(int i=0;i<numberObjects-1;i++) {
                 for(int j=i+1;j<numberObjects;j++) {
                     Interaction(*objects[i],*objects[j]);
                 }
             }
-
-
-
-            FillRect(hdcMem,&rect,(HBRUSH)GetStockObject(WHITE_BRUSH);
-
+            //Fills the buffer memory background image with white
+            FillRect(hdcMem,&rect,(HBRUSH)GetStockObject(WHITE_BRUSH));
+            //Redraws all the objects in the array
             for(int i=0;i<numberObjects;i++) {
                 objects[i]->Move(hdcMem,rect,hBrush);
-            } 
-
-            for(int i=0;i<10000;i++);
-
+            }
+            //Switches the loaded memory buffer with the display context
             BitBlt(hdc,0,0,rect.right,rect.bottom,hdcMem,0,0,SRCCOPY);
 
             EndPaint(hwnd,&ps);
-
             break;
 
         case WM_TIMER:
-            InvalidateRect(hwnd,NULL,TRUE);
+            //Invalidates rect area without calling the erase background message
+            InvalidateRect(hwnd,NULL,FALSE);
             break;
+
+
 
         case WM_DESTROY:
             //Destroy the double buffer memory and handle
             SelectObject(hdcMem,hOld);
             DeleteObject(hbmMem);
             DeleteDC(hdcMem);
-            //Kill the timer 
+            //Kill the timer
             KillTimer(hwnd,ID_TIMER);
 
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
