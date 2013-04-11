@@ -51,9 +51,9 @@ bool Interaction(Objects &alfa,Objects &beta) {
     if ( distance-1 < 60) {
         angle=(beta.center.y-alfa.center.y)/(beta.center.x-alfa.center.x+0.0001);
     {
-
-    alfa.Accelerate(-alfa.xSpeed,-alfa.ySpeed);
-    beta.Accelerate(-beta.xSpeed,-beta.ySpeed);
+    totalSpeed=(alfa.xSpeed/cos(arctg(angle))+beta.xSpeed/cos(arctg(angle)))/2;
+    alfa.Accelerate(-alfa.xSpeed*totalSpeed*cos(arctg(angle))/afla.xSpeed,-alfa.ySpeed*totalSpeed*sin(arctg(angle))/alfa.ySpeed);
+    beta.Accelerate(-beta.xSpeed*totalSpeed*cos(arctg(angle))/beta.xSpeed,-beta.ySpeed*totalSpeed*sin(arctg(angle))/beta.ySpeed);
     }
     return TRUE;
 }
