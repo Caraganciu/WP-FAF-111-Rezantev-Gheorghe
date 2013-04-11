@@ -2,6 +2,7 @@
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+//An array of Objects that is used to keep info of all the animated objects
 static Objects *objects[100];
 /*  Make the class name into a global variable  */
 char szClassName[ ] = "CodeBlocksWindowsApp";
@@ -72,12 +73,16 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 /*  This function is called by the Windows function DispatchMessage()  */
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{   static HDC hdc,hdcMem;
+{   //A handle to the device context and the buffer memory
+    static HDC hdc,hdcMem;
     static PAINTSTRUCT ps;
     static RECT rect;
     static HBRUSH hBrush;
+    // A bitmap handle for the double buffring
     static HBITMAP hbmMem;
+    // A handle to the old memory context
     static HANDLE hOld;
+    // The timer delay and the initial number of objects defined
     static int timerSpeed=50,numberObjects=0;
 
     switch (message)                  /* handle the messages */
