@@ -129,15 +129,13 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
 
 
-            Rectangle(hdcMem,0,0,rect.right,rect.bottom);
+            FillRect(hdcMem,&rect,(HBRUSH)GetStockObject(WHITE_BRUSH);
 
-            for(int i=0;i<numberObjects;i++)
-            {
+            for(int i=0;i<numberObjects;i++) {
                 objects[i]->Move(hdcMem,rect,hBrush);
+            } 
 
-            }
-
-
+            for(int i=0;i<10000;i++);
 
             BitBlt(hdc,0,0,rect.right,rect.bottom,hdcMem,0,0,SRCCOPY);
 
@@ -148,13 +146,18 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_TIMER:
             InvalidateRect(hwnd,NULL,TRUE);
             break;
+
         case WM_DESTROY:
+            //Destroy the double buffer memory and handle
             SelectObject(hdcMem,hOld);
             DeleteObject(hbmMem);
             DeleteDC(hdcMem);
+            //Kill the timer 
             KillTimer(hwnd,ID_TIMER);
+
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;
+
         default:                      /* for messages that we don't deal with */
             return DefWindowProc (hwnd, message, wParam, lParam);
     }
