@@ -13,5 +13,5 @@ Windows Timer. Animation.
 * Increase and decrease animation speed using mouse wheel **(2 pt)**
 * Solve flicking problem **(2 pt)**
 * Add animated objects which interact with each other **(2-6 pt)**, ex.:
-* Few balls which have different velocity . In order to get max points, add balls with mouse, make balls to change color on interaction.
+  ** Few balls which have different velocity . In order to get max points, add balls with mouse, make balls to change color on interaction.
 
