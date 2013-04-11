@@ -34,7 +34,7 @@ won't turn other balls because of how the order the array is read in .
 
 The PSG I used was the USC Aerial Robotics Programming Style Guide (C++)
 
-![Result](https://raw.github.com/TUM-FAF/WP-FAF-111-Rezantev-Gheorghe/master/lab%231/picture.png)
+![Result](https://raw.github.com/TUM-FAF/WP-FAF-111-Rezantev-Gheorghe/lab4/Lab%234/picture.png)
 
 ## Outro
 This one was a very pleasant one because of the ability to solve flickering which was a big problem in previous app i tried doing.
