@@ -28,7 +28,7 @@ The main things :
 2. Speed up or down the animation using the mouse wheel 
 3. When the balls with different speeds interact they balance their speeds 
 4. When the balls interact , the ball considered the first in the interaction turns dark green . Because of how the array is 
-read when checking the ball that will remain its normal color will be the last in the array . The balls that already turned 
+read , the ball that will keep its normal color until the end is the last one in the array . The balls that already turned 
 won't turn other balls because of how the order the array is read in . 
 5. The flickering was solved using double buffering and avoiding the call to erase background 
 
